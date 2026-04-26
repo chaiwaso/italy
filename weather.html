@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Italy Weather Realtime & 10-Day Forecast</title>
+  <style>
+    :root {
+      --bg: #f6f0e8;
+      --panel: rgba(255,255,255,0.82);
+      --panel-solid: #fffaf3;
+      --ink: #24303d;
+      --muted: #6b7280;
+      --line: rgba(74, 85, 104, 0.16);
+      --brand: #2f5f73;
+      --brand-2: #8a6f4d;
+      --accent: #d38d5f;
+      --good: #34795b;
+      --warn: #a76b18;
+      --bad: #9b3c3c;
+      --shadow: 0 18px 50px rgba(40, 50, 60, 0.12);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(47, 95, 115, 0.16), transparent 32rem),
+        radial-gradient(circle at top right, rgba(211, 141, 95, 0.18), transparent 30rem),
+        linear-gradient(135deg, #f9f3eb 0%, #f4efe7 45%, #eef1ed 100%);
+      min-height: 100vh;
+    }
+
+    .shell {
+      width: min(1480px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: start;
+      margin-bottom: 22px;
+    }
+
+    .hero {
+      background: linear-gradient(145deg, rgba(255,255,255,0.78), rgba(255,250,243,0.66));
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      border-radius: 30px;
+      padding: 28px;
+      backdrop-filter: blur(14px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 240px;
+      height: 240px;
+      border-radius: 999px;
+      right: -70px;
+      top: -90px;
+      background: rgba(47, 95, 115, 0.10);
+      pointer-events: none;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 4vw, 54px);
+      line-height: 1.02;
+      letter-spacing: -0.04em;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.55;
+      max-width: 980px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 260px;
+    }
+
+    .button {
+      appearance: none;
+      border: 0;
+      border-radius: 18px;
+      background: var(--brand);
+      color: white;
+      padding: 14px 18px;
+      font-weight: 750;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 12px 24px rgba(47, 95, 115, 0.22);
+      transition: transform 150ms ease, opacity 150ms ease;
+    }
+
+    .button:hover { transform: translateY(-1px); }
+    .button:disabled { opacity: 0.55; cursor: progress; transform: none; }
+
+    .status-card {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 20px;
+      padding: 14px 16px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+      box-shadow: 0 10px 26px rgba(40, 50, 60, 0.08);
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: end;
+      margin: 26px 0 14px;
+    }
+
+    .section-title h2 {
+      margin: 0;
+      font-size: clamp(20px, 2vw, 28px);
+      letter-spacing: -0.03em;
+    }
+
+    .section-title p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(190px, 1fr));
+      gap: 14px;
+    }
+
+    .weather-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: 0 14px 34px rgba(40, 50, 60, 0.09);
+      backdrop-filter: blur(12px);
+      cursor: pointer;
+      transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+      min-height: 210px;
+    }
+
+    .weather-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 18px 42px rgba(40, 50, 60, 0.14);
+    }
+
+    .weather-card.active {
+      border-color: rgba(47, 95, 115, 0.55);
+      box-shadow: 0 0 0 4px rgba(47, 95, 115, 0.08), 0 18px 42px rgba(40, 50, 60, 0.13);
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .city {
+      font-size: 19px;
+      font-weight: 820;
+      letter-spacing: -0.02em;
+    }
+
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(47, 95, 115, 0.14);
+      background: rgba(47, 95, 115, 0.08);
+      color: var(--brand);
+      padding: 6px 9px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .temp {
+      font-size: 48px;
+      line-height: 1;
+      letter-spacing: -0.07em;
+      font-weight: 850;
+      margin: 16px 0 8px;
+    }
+
+    .desc {
+      font-weight: 700;
+      color: #3f4a55;
+      min-height: 24px;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+      margin-top: 15px;
+    }
+
+    .metric {
+      background: rgba(255,255,255,0.58);
+      border: 1px solid rgba(74,85,104,0.10);
+      border-radius: 14px;
+      padding: 9px 10px;
+    }
+
+    .metric .label {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      margin-bottom: 3px;
+    }
+
+    .metric .value {
+      font-weight: 790;
+      font-size: 14px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      border-radius: 28px;
+      overflow: hidden;
+      backdrop-filter: blur(14px);
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 250, 243, 0.66);
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tab {
+      appearance: none;
+      border: 1px solid rgba(47, 95, 115, 0.18);
+      background: rgba(255,255,255,0.72);
+      color: var(--brand);
+      border-radius: 999px;
+      padding: 9px 12px;
+      font-weight: 760;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 140ms ease;
+    }
+
+    .tab.active {
+      color: #fff;
+      background: var(--brand);
+      border-color: var(--brand);
+      box-shadow: 0 10px 20px rgba(47, 95, 115, 0.20);
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 980px;
+    }
+
+    th, td {
+      padding: 14px 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(74, 85, 104, 0.13);
+      vertical-align: top;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #fff8ee;
+      color: #4d5a63;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    tbody tr:nth-child(even) td { background: rgba(255,255,255,0.34); }
+    tbody tr:hover td { background: rgba(47,95,115,0.055); }
+
+    .date-cell {
+      min-width: 150px;
+      font-weight: 820;
+    }
+
+    .date-cell .dow {
+      color: var(--brand-2);
+      font-size: 13px;
+      margin-bottom: 3px;
+    }
+
+    .range {
+      font-weight: 820;
+      font-size: 17px;
+      white-space: nowrap;
+    }
+
+    .rain {
+      color: var(--brand);
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .time-block {
+      min-width: 118px;
+    }
+
+    .time-block .t {
+      font-weight: 870;
+      font-size: 18px;
+    }
+
+    .time-block .sub {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      margin-top: 4px;
+    }
+
+    .summary-table td:first-child, .summary-table th:first-child {
+      position: sticky;
+      left: 0;
+      background: #fff8ee;
+      z-index: 2;
+    }
+
+    .summary-table tbody td:first-child {
+      background: rgba(255, 250, 243, 0.96);
+      font-weight: 820;
+    }
+
+    .notice {
+      margin-top: 16px;
+      border: 1px solid rgba(167, 107, 24, 0.24);
+      background: rgba(255, 247, 226, 0.76);
+      color: #6f4f18;
+      border-radius: 18px;
+      padding: 13px 15px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .error {
+      border-color: rgba(155, 60, 60, 0.28);
+      background: rgba(255, 238, 238, 0.78);
+      color: #873232;
+    }
+
+    .footer {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+      margin-top: 18px;
+      text-align: center;
+    }
+
+    .skeleton {
+      background: linear-gradient(90deg, rgba(255,255,255,0.4), rgba(255,255,255,0.82), rgba(255,255,255,0.4));
+      background-size: 220% 100%;
+      animation: pulse 1.4s ease infinite;
+      border-radius: 14px;
+      min-height: 18px;
+    }
+
+    @keyframes pulse {
+      from { background-position: 200% 0; }
+      to { background-position: -200% 0; }
+    }
+
+    @media (max-width: 1160px) {
+      header { grid-template-columns: 1fr; }
+      .toolbar { min-width: unset; }
+      .grid { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
+    }
+
+    @media (max-width: 640px) {
+      .shell { width: min(100% - 20px, 1480px); padding-top: 14px; }
+      .hero { padding: 20px; border-radius: 24px; }
+      .grid { grid-template-columns: 1fr; }
+      .panel-head { align-items: flex-start; flex-direction: column; }
+      .section-title { align-items: flex-start; flex-direction: column; }
+      .temp { font-size: 44px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <section class="hero">
+        <h1>Italy Weather Dashboard</h1>
+        <p class="subtitle">
+          Temperature แบบ realtime และ forecast รายช่วงเวลาของวัน สำหรับ Milan, Lake Como, Venice, Florence และ La Spezia — วันนี้ + ล่วงหน้า 10 วัน โดยดึงข้อมูลจาก Open-Meteo Weather Forecast API โดยตรง
+        </p>
+      </section>
+      <aside class="toolbar">
+        <button class="button" id="refreshBtn" type="button">Refresh Weather Data</button>
+        <div class="status-card" id="statusBox">
+          กำลังโหลดข้อมูล...<br />Timezone: Europe/Rome
+        </div>
+      </aside>
+    </header>
+
+    <section class="section-title">
+      <div>
+        <h2>Current Weather by City</h2>
+        <p>คลิก card เพื่อดู forecast รายเมืองด้านล่าง</p>
+      </div>
+    </section>
+    <section class="grid" id="cards">
+      <article class="weather-card"><div class="skeleton" style="height:170px"></div></article>
+      <article class="weather-card"><div class="skeleton" style="height:170px"></div></article>
+      <article class="weather-card"><div class="skeleton" style="height:170px"></div></article>
+      <article class="weather-card"><div class="skeleton" style="height:170px"></div></article>
+      <article class="weather-card"><div class="skeleton" style="height:170px"></div></article>
+    </section>
+
+    <section class="section-title">
+      <div>
+        <h2>Today Temperature Comparison</h2>
+        <p>เทียบอุณหภูมิช่วงเวลาหลักของวันนี้ในทุกเมือง</p>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="table-wrap">
+        <table class="summary-table" id="todayTable"></table>
+      </div>
+    </section>
+
+    <section class="section-title">
+      <div>
+        <h2 id="forecastTitle">10-Day Forecast by Time of Day</h2>
+        <p>ตารางแสดงวันนี้ + อีก 10 วัน รวม 11 วัน</p>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="panel-head">
+        <div class="tabs" id="tabs"></div>
+        <span class="badge" id="selectedMeta">Local time: Europe/Rome</span>
+      </div>
+      <div class="table-wrap">
+        <table id="forecastTable"></table>
+      </div>
+    </section>
+
+    <div class="notice">
+      หมายเหตุ: ข้อมูล “current” ของ Open-Meteo เป็น weather model data แบบ 15-minutely ไม่ใช่ข้อมูลสถานีวัดอากาศ onsite แบบ manual observation โดยตรง หากเปิดไฟล์แล้ว browser บล็อกการโหลดข้อมูล ให้เปิดผ่าน VS Code Live Server หรือ web server ภายในเครื่องแทนการ double-click file
+    </div>
+
+    <p class="footer">
+      Data source: Open-Meteo Weather Forecast API. This dashboard uses browser-side JavaScript fetch calls; no backend server and no API key are required for non-commercial use under Open-Meteo terms.
+    </p>
+  </main>
+
+  <script>
+    const CITIES = [
+      { id: 'milan', name: 'Milan', label: 'Milan', lat: 45.4642, lon: 9.1900 },
+      { id: 'lake-como', name: 'Lake Como', label: 'Lake Como / Como', lat: 45.8081, lon: 9.0852 },
+      { id: 'venice', name: 'Venice', label: 'Venice', lat: 45.4408, lon: 12.3155 },
+      { id: 'florence', name: 'Florence', label: 'Florence', lat: 43.7696, lon: 11.2558 },
+      { id: 'la-spezia', name: 'La Spezia', label: 'La Spezia', lat: 44.1025, lon: 9.8241 }
+    ];
+
+    const API_BASE = 'https://api.open-meteo.com/v1/forecast';
+    const TIMEZONE = 'Europe/Rome';
+    const FORECAST_DAYS = 11; // today + next 10 days
+    const KEY_TIMES = [
+      { hour: 6, label: '06:00', thai: 'เช้า' },
+      { hour: 9, label: '09:00', thai: 'สาย' },
+      { hour: 12, label: '12:00', thai: 'เที่ยง' },
+      { hour: 15, label: '15:00', thai: 'บ่าย' },
+      { hour: 18, label: '18:00', thai: 'เย็น' },
+      { hour: 21, label: '21:00', thai: 'กลางคืน' }
+    ];
+
+    let state = {
+      weatherByCity: {},
+      selectedCityId: 'milan',
+      lastLoadedAt: null
+    };
+
+    const statusBox = document.getElementById('statusBox');
+    const cardsEl = document.getElementById('cards');
+    const tabsEl = document.getElementById('tabs');
+    const forecastTable = document.getElementById('forecastTable');
+    const todayTable = document.getElementById('todayTable');
+    const forecastTitle = document.getElementById('forecastTitle');
+    const selectedMeta = document.getElementById('selectedMeta');
+    const refreshBtn = document.getElementById('refreshBtn');
+
+    function weatherDescription(code) {
+      const map = {
+        0: 'Clear sky',
+        1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
+        45: 'Fog', 48: 'Rime fog',
+        51: 'Light drizzle', 53: 'Drizzle', 55: 'Dense drizzle',
+        56: 'Freezing drizzle', 57: 'Dense freezing drizzle',
+        61: 'Light rain', 63: 'Rain', 65: 'Heavy rain',
+        66: 'Freezing rain', 67: 'Heavy freezing rain',
+        71: 'Light snow', 73: 'Snow', 75: 'Heavy snow',
+        77: 'Snow grains',
+        80: 'Light showers', 81: 'Showers', 82: 'Violent showers',
+        85: 'Light snow showers', 86: 'Heavy snow showers',
+        95: 'Thunderstorm', 96: 'Thunderstorm with hail', 99: 'Heavy thunderstorm with hail'
+      };
+      return map[Number(code)] || 'Weather code ' + code;
+    }
+
+    function fmtTemp(v) {
+      return Number.isFinite(v) ? `${Math.round(v)}°C` : '—';
+    }
+
+    function fmtDecimal(v, digits = 1) {
+      return Number.isFinite(v) ? v.toFixed(digits) : '—';
+    }
+
+    function fmtPercent(v) {
+      return Number.isFinite(v) ? `${Math.round(v)}%` : '—';
+    }
+
+    function fmtDate(dateText) {
+      const d = new Date(`${dateText}T12:00:00`);
+      return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short' }).format(d);
+    }
+
+    function fmtWeekday(dateText) {
+      const d = new Date(`${dateText}T12:00:00`);
+      return new Intl.DateTimeFormat('en-GB', { weekday: 'short' }).format(d);
+    }
+
+    function localClock() {
+      return new Intl.DateTimeFormat('en-GB', {
+        timeZone: TIMEZONE,
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        day: '2-digit', month: 'short', year: 'numeric'
+      }).format(new Date());
+    }
+
+    function isoHour(dateText, hour) {
+      return `${dateText}T${String(hour).padStart(2, '0')}:00`;
+    }
+
+    function getHourlyIndex(data, dateText, hour) {
+      const target = isoHour(dateText, hour);
+      const exact = data.hourly.time.indexOf(target);
+      if (exact >= 0) return exact;
+
+      const sameDay = data.hourly.time
+        .map((time, idx) => ({ time, idx }))
+        .filter(item => item.time.startsWith(dateText));
+      if (!sameDay.length) return -1;
+
+      let nearest = sameDay[0];
+      let minDiff = Infinity;
+      for (const item of sameDay) {
+        const h = Number(item.time.slice(11, 13));
+        const diff = Math.abs(h - hour);
+        if (diff < minDiff) {
+          minDiff = diff;
+          nearest = item;
+        }
+      }
+      return nearest.idx;
+    }
+
+    function getAt(data, dateText, hour, key) {
+      const idx = getHourlyIndex(data, dateText, hour);
+      if (idx < 0 || !data.hourly[key]) return null;
+      return data.hourly[key][idx];
+    }
+
+    function buildUrl(city) {
+      const params = new URLSearchParams({
+        latitude: city.lat,
+        longitude: city.lon,
+        timezone: TIMEZONE,
+        forecast_days: FORECAST_DAYS,
+        temperature_unit: 'celsius',
+        wind_speed_unit: 'kmh',
+        precipitation_unit: 'mm',
+        current: [
+          'temperature_2m', 'apparent_temperature', 'relative_humidity_2m',
+          'precipitation', 'rain', 'weather_code', 'cloud_cover',
+          'wind_speed_10m', 'wind_direction_10m', 'is_day'
+        ].join(','),
+        hourly: [
+          'temperature_2m', 'apparent_temperature', 'precipitation_probability',
+          'precipitation', 'weather_code', 'cloud_cover', 'wind_speed_10m'
+        ].join(','),
+        daily: [
+          'weather_code', 'temperature_2m_max', 'temperature_2m_min',
+          'precipitation_probability_max', 'sunrise', 'sunset'
+        ].join(',')
+      });
+      return `${API_BASE}?${params.toString()}`;
+    }
+
+    async function fetchCity(city) {
+      const response = await fetch(buildUrl(city), { cache: 'no-store' });
+      if (!response.ok) {
+        let reason = `HTTP ${response.status}`;
+        try {
+          const err = await response.json();
+          if (err.reason) reason = err.reason;
+        } catch (_) {}
+        throw new Error(`${city.name}: ${reason}`);
+      }
+      const data = await response.json();
+      return { city, data };
+    }
+
+    async function loadWeather() {
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = 'Loading...';
+      statusBox.className = 'status-card';
+      statusBox.innerHTML = `กำลังโหลดข้อมูลจาก Open-Meteo...<br />Local time: ${localClock()}`;
+
+      try {
+        const results = await Promise.all(CITIES.map(fetchCity));
+        state.weatherByCity = Object.fromEntries(results.map(({ city, data }) => [city.id, data]));
+        state.lastLoadedAt = new Date();
+        renderAll();
+        statusBox.className = 'status-card';
+        statusBox.innerHTML = `Loaded successfully<br />Updated: ${localClock()}<br />Forecast range: วันนี้ + 10 วัน`;
+      } catch (error) {
+        console.error(error);
+        statusBox.className = 'status-card error';
+        statusBox.innerHTML = `โหลดข้อมูลไม่สำเร็จ<br />${error.message}<br />ลองเปิดผ่าน Live Server หากเปิดจาก local file แล้วถูก browser บล็อก`;
+      } finally {
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = 'Refresh Weather Data';
+      }
+    }
+
+    function renderAll() {
+      renderCards();
+      renderTabs();
+      renderTodayTable();
+      renderForecastTable();
+    }
+
+    function renderCards() {
+      cardsEl.innerHTML = CITIES.map(city => {
+        const data = state.weatherByCity[city.id];
+        if (!data || !data.current) return '';
+        const c = data.current;
+        const selected = city.id === state.selectedCityId ? ' active' : '';
+        const dayNight = c.is_day === 1 ? 'Day' : 'Night';
+        return `
+          <article class="weather-card${selected}" data-city-id="${city.id}" tabindex="0" role="button" aria-label="Show forecast for ${city.name}">
+            <div class="card-top">
+              <div>
+                <div class="city">${city.label}</div>
+                <div class="small">${c.time ? c.time.replace('T', ' ') : 'Current'}</div>
+              </div>
+              <span class="badge">${dayNight}</span>
+            </div>
+            <div class="temp">${fmtTemp(c.temperature_2m)}</div>
+            <div class="desc">${weatherDescription(c.weather_code)}</div>
+            <div class="metrics">
+              <div class="metric"><span class="label">Feels like</span><span class="value">${fmtTemp(c.apparent_temperature)}</span></div>
+              <div class="metric"><span class="label">Humidity</span><span class="value">${fmtPercent(c.relative_humidity_2m)}</span></div>
+              <div class="metric"><span class="label">Rain</span><span class="value">${fmtDecimal(c.rain, 1)} mm</span></div>
+              <div class="metric"><span class="label">Wind</span><span class="value">${fmtDecimal(c.wind_speed_10m, 0)} km/h</span></div>
+            </div>
+          </article>
+        `;
+      }).join('');
+
+      cardsEl.querySelectorAll('.weather-card').forEach(card => {
+        card.addEventListener('click', () => setSelectedCity(card.dataset.cityId));
+        card.addEventListener('keydown', event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            setSelectedCity(card.dataset.cityId);
+          }
+        });
+      });
+    }
+
+    function renderTabs() {
+      tabsEl.innerHTML = CITIES.map(city => `
+        <button class="tab ${city.id === state.selectedCityId ? 'active' : ''}" data-city-id="${city.id}" type="button">${city.name}</button>
+      `).join('');
+
+      tabsEl.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => setSelectedCity(tab.dataset.cityId));
+      });
+    }
+
+    function setSelectedCity(cityId) {
+      state.selectedCityId = cityId;
+      renderCards();
+      renderTabs();
+      renderForecastTable();
+      document.getElementById('forecastTitle').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function renderTodayTable() {
+      const today = state.weatherByCity[state.selectedCityId]?.daily?.time?.[0];
+      if (!today) return;
+
+      todayTable.innerHTML = `
+        <thead>
+          <tr>
+            <th>City</th>
+            <th>Current</th>
+            ${KEY_TIMES.map(slot => `<th>${slot.label}<br /><span style="font-weight:600;color:#7a8792;text-transform:none;letter-spacing:0">${slot.thai}</span></th>`).join('')}
+            <th>Daily Range</th>
+            <th>Rain Chance</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${CITIES.map(city => {
+            const data = state.weatherByCity[city.id];
+            const dayIdx = 0;
+            const c = data.current || {};
+            const cells = KEY_TIMES.map(slot => {
+              const t = getAt(data, today, slot.hour, 'temperature_2m');
+              const p = getAt(data, today, slot.hour, 'precipitation_probability');
+              return `<td><div class="time-block"><div class="t">${fmtTemp(t)}</div><div class="sub">Rain ${fmtPercent(p)}</div></div></td>`;
+            }).join('');
+            return `
+              <tr>
+                <td>${city.label}</td>
+                <td><div class="time-block"><div class="t">${fmtTemp(c.temperature_2m)}</div><div class="sub">${weatherDescription(c.weather_code)}</div></div></td>
+                ${cells}
+                <td><span class="range">${fmtTemp(data.daily.temperature_2m_min[dayIdx])} / ${fmtTemp(data.daily.temperature_2m_max[dayIdx])}</span></td>
+                <td><span class="rain">${fmtPercent(data.daily.precipitation_probability_max[dayIdx])}</span></td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      `;
+    }
+
+    function renderForecastTable() {
+      const city = CITIES.find(c => c.id === state.selectedCityId) || CITIES[0];
+      const data = state.weatherByCity[city.id];
+      if (!data || !data.daily) return;
+
+      forecastTitle.textContent = `${city.label} — Forecast by Time of Day`;
+      selectedMeta.textContent = `Timezone: ${data.timezone || TIMEZONE}`;
+
+      const rows = data.daily.time.map((dateText, idx) => {
+        const timeCells = KEY_TIMES.map(slot => {
+          const temp = getAt(data, dateText, slot.hour, 'temperature_2m');
+          const feels = getAt(data, dateText, slot.hour, 'apparent_temperature');
+          const rainProb = getAt(data, dateText, slot.hour, 'precipitation_probability');
+          const precip = getAt(data, dateText, slot.hour, 'precipitation');
+          const code = getAt(data, dateText, slot.hour, 'weather_code');
+          return `
+            <td>
+              <div class="time-block">
+                <div class="t">${fmtTemp(temp)}</div>
+                <div class="sub">Feels ${fmtTemp(feels)}</div>
+                <div class="sub">Rain ${fmtPercent(rainProb)} / ${fmtDecimal(precip, 1)} mm</div>
+                <div class="sub">${weatherDescription(code)}</div>
+              </div>
+            </td>
+          `;
+        }).join('');
+
+        return `
+          <tr>
+            <td class="date-cell">
+              <div class="dow">${idx === 0 ? 'Today' : fmtWeekday(dateText)}</div>
+              ${fmtDate(dateText)}
+              <div class="small">${dateText}</div>
+            </td>
+            <td><span class="range">${fmtTemp(data.daily.temperature_2m_min[idx])} / ${fmtTemp(data.daily.temperature_2m_max[idx])}</span></td>
+            <td>${weatherDescription(data.daily.weather_code[idx])}</td>
+            <td><span class="rain">${fmtPercent(data.daily.precipitation_probability_max[idx])}</span></td>
+            ${timeCells}
+          </tr>
+        `;
+      }).join('');
+
+      forecastTable.innerHTML = `
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Min / Max</th>
+            <th>Daily Outlook</th>
+            <th>Rain Max</th>
+            ${KEY_TIMES.map(slot => `<th>${slot.label}<br /><span style="font-weight:600;color:#7a8792;text-transform:none;letter-spacing:0">${slot.thai}</span></th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      `;
+    }
+
+    refreshBtn.addEventListener('click', loadWeather);
+    loadWeather();
+    setInterval(() => {
+      statusBox.innerHTML = `Last loaded: ${state.lastLoadedAt ? localClock() : 'not yet'}<br />Local time: ${localClock()}<br />Auto refresh every 15 minutes`;
+    }, 1000);
+    setInterval(loadWeather, 15 * 60 * 1000);
+  </script>
+</body>
+</html>
